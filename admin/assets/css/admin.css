@@ -1,0 +1,599 @@
+/**
+ * Event Ticket Manager - admin styles.
+ */
+
+.etm-wrap .etm-columns {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 20px;
+	align-items: flex-start;
+	margin-top: 18px;
+}
+
+.etm-columns__main {
+	flex: 1 1 560px;
+	min-width: 0;
+}
+
+.etm-columns__side {
+	flex: 0 1 300px;
+	min-width: 260px;
+}
+
+.etm-card {
+	margin: 0 0 18px;
+	padding: 18px 20px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+}
+
+.etm-card__title {
+	margin: 0 0 14px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f0f0f1;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.etm-card--info {
+	background: #f6f7f7;
+}
+
+.etm-admin-field {
+	margin-bottom: 16px;
+}
+
+.etm-admin-field > label {
+	display: block;
+	margin-bottom: 5px;
+	font-weight: 600;
+}
+
+.etm-admin-field label.etm-checkbox {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-weight: 500;
+}
+
+.etm-admin-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 18px;
+}
+
+.etm-admin-row > .etm-admin-field {
+	flex: 1 1 220px;
+}
+
+.etm-w-100 {
+	width: 100%;
+}
+
+.etm-required {
+	color: #d63638;
+}
+
+.etm-error {
+	margin: 4px 0 0;
+	color: #d63638;
+	font-size: 12px;
+}
+
+.etm-muted {
+	color: #787c82;
+}
+
+.etm-danger {
+	color: #d63638;
+	font-weight: 600;
+}
+
+.etm-status-ok {
+	color: #007017;
+	font-weight: 600;
+}
+
+.etm-status-warn {
+	color: #996800;
+	font-weight: 600;
+}
+
+/* Badges */
+
+.etm-badge {
+	display: inline-block;
+	padding: 3px 9px;
+	border-radius: 999px;
+	background: #f0f0f1;
+	color: #3c434a;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.6;
+	text-transform: capitalize;
+}
+
+.etm-badge--published,
+.etm-badge--paid {
+	background: #edfaef;
+	color: #007017;
+}
+
+.etm-badge--draft,
+.etm-badge--pending {
+	background: #fcf9e8;
+	color: #8a6600;
+}
+
+.etm-badge--closed,
+.etm-badge--cancelled {
+	background: #f0f0f1;
+	color: #646970;
+}
+
+.etm-badge--failed {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+.etm-badge--refunded {
+	background: #f0f6fc;
+	color: #0a4b78;
+}
+
+/* Shortcode chip */
+
+.etm-shortcode {
+	display: inline-block;
+	padding: 6px 10px;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 12px;
+	user-select: all;
+}
+
+.etm-shortcode:hover {
+	border-color: #2271b1;
+}
+
+.etm-shortcode.is-copied {
+	border-color: #007017;
+	background: #edfaef;
+}
+
+/* Detail tables */
+
+.etm-detail-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.etm-detail-table th {
+	width: 40%;
+	padding: 9px 8px 9px 0;
+	color: #646970;
+	font-weight: 500;
+	text-align: left;
+	vertical-align: top;
+}
+
+.etm-detail-table td {
+	padding: 9px 0;
+	vertical-align: top;
+}
+
+.etm-detail-table tbody tr + tr th,
+.etm-detail-table tbody tr + tr td {
+	border-top: 1px solid #f0f0f1;
+}
+
+.etm-code {
+	font-size: 11px;
+	word-break: break-all;
+}
+
+.etm-stats {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.etm-stats li {
+	display: flex;
+	justify-content: space-between;
+	padding: 8px 0;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.etm-stats li:last-child {
+	border-bottom: 0;
+}
+
+.etm-stats strong {
+	font-size: 15px;
+}
+
+/* Field manager */
+
+.etm-fields-table td {
+	vertical-align: middle;
+}
+
+.etm-fields-table .etm-col-handle,
+.etm-field-row__handle {
+	width: 46px;
+	white-space: nowrap;
+}
+
+.etm-field-row__flags label {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 12px;
+}
+
+.etm-field-row--core {
+	background: #fbfbfb;
+}
+
+.etm-field-row textarea.etm-options {
+	width: 100%;
+	min-height: 42px;
+	font-size: 12px;
+}
+
+.etm-move {
+	padding: 0 3px;
+	color: #646970;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.etm-move:hover {
+	color: #2271b1;
+}
+
+.etm-intro {
+	max-width: 780px;
+	margin-bottom: 16px;
+	font-size: 13px;
+}
+
+.etm-placeholders code {
+	margin-right: 6px;
+}
+
+.etm-list {
+	margin: 6px 0 12px 18px;
+	list-style: disc;
+}
+
+.etm-inline-form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.etm-status-form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 14px;
+}
+
+.etm-status-form label {
+	flex: 1 1 100%;
+	font-weight: 600;
+}
+
+.etm-filter-note {
+	padding: 8px 12px;
+	background: #f6f7f7;
+	border-left: 4px solid #2271b1;
+}
+
+.etm-help-panel {
+	max-width: 720px;
+	margin-top: 24px;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+}
+
+.etm-help-panel h2 {
+	margin-top: 0;
+	font-size: 14px;
+}
+
+@media screen and (max-width: 782px) {
+	.etm-columns {
+		flex-direction: column;
+	}
+
+	.etm-columns__side {
+		flex: 1 1 auto;
+		width: 100%;
+	}
+
+	.etm-fields-table,
+	.etm-fields-table tbody,
+	.etm-fields-table tr,
+	.etm-fields-table td {
+		display: block;
+		width: 100%;
+	}
+
+	.etm-fields-table thead {
+		display: none;
+	}
+
+	.etm-fields-table tr {
+		margin-bottom: 12px;
+		border: 1px solid #dcdcde;
+	}
+}
+
+/* Branding preview */
+
+.etm-preview {
+	padding: 14px;
+	background: #f6f7f7;
+	border-radius: 10px;
+}
+
+.etm-preview__card {
+	padding: 16px;
+	background: var(--preview-bg, #fff);
+	border: 1px solid rgba(17, 24, 39, .12);
+	border-radius: 12px;
+	color: var(--preview-text, #111827);
+}
+
+.etm-preview__label {
+	display: inline-block;
+	margin-bottom: 6px;
+	padding: 2px 9px;
+	background: var(--preview-primary, #4f46e5);
+	border-radius: 999px;
+	color: var(--preview-on-primary, #fff);
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: .07em;
+	text-transform: uppercase;
+}
+
+.etm-preview__title {
+	display: block;
+	margin-bottom: 10px;
+	color: var(--preview-text, #111827);
+	font-size: 15px;
+}
+
+.etm-preview__addon {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	margin-bottom: 14px;
+	padding: 9px 11px;
+	background: var(--preview-bg, #fff);
+	border: 1px solid rgba(17, 24, 39, .14);
+	border-radius: 9px;
+}
+
+.etm-preview__stepper {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 4px;
+	border: 1px solid rgba(17, 24, 39, .14);
+	border-radius: 999px;
+}
+
+.etm-preview__stepper-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	background: var(--preview-primary, #4f46e5);
+	border-radius: 999px;
+	color: var(--preview-on-primary, #fff);
+	font-size: 11px;
+	line-height: 1;
+}
+
+.etm-preview__stepper-value {
+	min-width: 12px;
+	color: var(--preview-text, #111827);
+	font-size: 12px;
+	font-weight: 700;
+	text-align: center;
+}
+
+.etm-preview__addon-text {
+	flex: 1 1 auto;
+	color: var(--preview-text, #111827);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.etm-preview__price {
+	color: var(--preview-primary, #4f46e5);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.etm-preview__steps {
+	display: flex;
+	gap: 6px;
+	margin-bottom: 14px;
+}
+
+.etm-preview__step {
+	flex: 1 1 auto;
+	height: 5px;
+	background: rgba(17, 24, 39, .12);
+	border-radius: 3px;
+}
+
+.etm-preview__step.is-done {
+	background: var(--preview-accent, #10b981);
+}
+
+.etm-preview__step.is-active {
+	background: var(--preview-primary, #4f46e5);
+}
+
+.etm-preview__button {
+	width: 100%;
+	padding: 10px 14px;
+	background: var(--preview-primary, #4f46e5);
+	border: 0;
+	border-radius: 9px;
+	color: var(--preview-on-primary, #fff);
+	font-size: 13px;
+	font-weight: 600;
+	opacity: 1;
+}
+
+.etm-color-field + .wp-picker-container {
+	vertical-align: top;
+}
+
+.etm-contrast {
+	margin: 16px 0 4px;
+	padding: 12px 14px;
+	background: #f6f7f7;
+	border-radius: 8px;
+}
+
+.etm-contrast h3 {
+	margin: 0 0 8px;
+	font-size: 13px;
+}
+
+.etm-contrast p {
+	margin: 4px 0;
+	font-size: 13px;
+}
+
+/* Ticket types repeater */
+
+.etm-tickets-repeater {
+	margin-bottom: 18px;
+}
+
+.etm-ticket-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 10px;
+	padding: 12px 14px;
+	background: #fbfbfc;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+}
+
+.etm-ticket-row__handle {
+	display: flex;
+	flex-direction: column;
+	line-height: 1;
+	padding-bottom: 4px;
+}
+
+.etm-ticket-row__field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 0 1 120px;
+}
+
+.etm-ticket-row__field--title {
+	flex: 1 1 200px;
+}
+
+.etm-ticket-row__field--flags {
+	flex: 0 1 150px;
+}
+
+.etm-ticket-row__field label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #50575e;
+}
+
+.etm-ticket-row__field input[type="text"],
+.etm-ticket-row__field input[type="number"] {
+	width: 100%;
+}
+
+.etm-ticket-row__sold {
+	display: block;
+	margin-top: 3px;
+	font-size: 11px;
+}
+
+.etm-ticket-row__remove {
+	flex: 0 0 auto;
+	padding-bottom: 4px;
+}
+
+.etm-ticket-row__remove .etm-remove-ticket {
+	font-size: 18px;
+	line-height: 1;
+	text-decoration: none;
+	color: #b32d2e;
+	cursor: pointer;
+}
+
+.etm-booking-tickets th {
+	text-align: left;
+}
+
+@media screen and (max-width: 782px) {
+	.etm-ticket-row__field {
+		flex: 1 1 100%;
+	}
+}
+
+.etm-ticket-row__field--qty {
+	flex: 0 1 90px;
+}
+
+.etm-checkbox-list {
+	max-height: 190px;
+	margin-top: 8px;
+	padding: 10px 12px;
+	overflow-y: auto;
+	background: #fbfbfc;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+}
+
+.etm-checkbox-list label {
+	display: block;
+	margin-bottom: 5px;
+	font-size: 13px;
+}
+
+/* Stripe connection status */
+
+.etm-conn--connected {
+	color: #1e7e34;
+}
+
+.etm-conn--failed {
+	color: #b32d2e;
+}
+
+.etm-conn--not_connected {
+	color: #8a6d3b;
+}
