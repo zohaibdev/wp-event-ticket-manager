@@ -17,6 +17,10 @@ $etm_event_id = isset( $_GET['event_id'] ) ? absint( $_GET['event_id'] ) : 0;
 <div class="wrap etm-wrap">
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Bookings', 'event-ticket-manager' ); ?></h1>
 
+	<a href="<?php echo esc_url( admin_url( 'admin.php?page=etm-bookings' ) ); ?>" class="page-title-action">
+		<?php esc_html_e( 'Back to attendees', 'event-ticket-manager' ); ?>
+	</a>
+
 	<hr class="wp-header-end" />
 
 	<?php if ( $etm_event_id ) : ?>
@@ -30,7 +34,7 @@ $etm_event_id = isset( $_GET['event_id'] ) ? absint( $_GET['event_id'] ) : 0;
 					'<strong>' . esc_html( $etm_event->title ) . '</strong>'
 				);
 				?>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=etm-bookings' ) ); ?>">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=etm-bookings&action=bookings' ) ); ?>">
 					<?php esc_html_e( 'Clear filter', 'event-ticket-manager' ); ?>
 				</a>
 			</p>
@@ -41,6 +45,7 @@ $etm_event_id = isset( $_GET['event_id'] ) ? absint( $_GET['event_id'] ) : 0;
 
 	<form method="get">
 		<input type="hidden" name="page" value="etm-bookings" />
+		<input type="hidden" name="action" value="bookings" />
 		<?php if ( '' !== $etm_status ) : ?>
 			<input type="hidden" name="payment_status" value="<?php echo esc_attr( $etm_status ); ?>" />
 		<?php endif; ?>

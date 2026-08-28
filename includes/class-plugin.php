@@ -66,7 +66,10 @@ final class ETM_Plugin {
 			'includes/class-pending-orders.php',
 			'includes/class-capacity.php',
 			'includes/class-bookings.php',
+			'includes/class-qr-encoder.php',
 			'includes/class-attendees.php',
+			'includes/class-attendees-export.php',
+			'includes/class-ticket-verification.php',
 			'includes/class-stripe.php',
 			'includes/class-checkout.php',
 			'includes/class-webhooks.php',
@@ -97,6 +100,7 @@ final class ETM_Plugin {
 		$this->services['capacity']      = new ETM_Capacity();
 		$this->services['bookings']      = new ETM_Bookings();
 		$this->services['attendees']     = new ETM_Attendees();
+		$this->services['ticket_verification'] = new ETM_Ticket_Verification();
 		$this->services['stripe']        = new ETM_Stripe();
 		$this->services['emails']        = new ETM_Emails();
 		$this->services['checkout']      = new ETM_Checkout();
@@ -149,6 +153,10 @@ final class ETM_Plugin {
 		// The schema migrations create ticket types, so this one is needed even
 		// though activation never boots the full plugin.
 		require_once ETM_PLUGIN_DIR . 'includes/class-event-tickets.php';
+		// The attendee-record and security-code migrations need these: the
+		// former reads each booking to build the purchaser's attendee row.
+		require_once ETM_PLUGIN_DIR . 'includes/class-bookings.php';
+		require_once ETM_PLUGIN_DIR . 'includes/class-attendees.php';
 		require_once ETM_PLUGIN_DIR . 'includes/class-cron.php';
 
 		ETM_Database::install();

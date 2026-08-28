@@ -53,6 +53,11 @@ class ETM_Settings {
 			self::OPTION_STRIPE  => array(
 				'enable_stripe'        => 0,
 				'connection_method'    => 'manual',
+				// Existing installs keep authenticating with their secret key:
+				// the restricted fields stay empty until an admin opts in.
+				'credential_type'      => 'secret_key',
+				'test_restricted_key'  => '',
+				'live_restricted_key'  => '',
 				'mode'                 => 'test',
 				'test_publishable_key' => '',
 				'test_secret_key'      => '',
@@ -596,9 +601,13 @@ class ETM_Settings {
 		$method = isset( $input['connection_method'] ) ? (string) $input['connection_method'] : ETM_Stripe::CONNECTION_MANUAL;
 		$method = isset( ETM_Stripe::connection_methods()[ $method ] ) ? $method : ETM_Stripe::CONNECTION_MANUAL;
 
+		$credential = isset( $input['credential_type'] ) ? (string) $input['credential_type'] : ETM_Stripe::CREDENTIAL_SECRET;
+		$credential = isset( ETM_Stripe::credential_types()[ $credential ] ) ? $credential : ETM_Stripe::CREDENTIAL_SECRET;
+
 		$clean = array(
 			'enable_stripe'        => empty( $input['enable_stripe'] ) ? 0 : 1,
 			'connection_method'    => $method,
+			'credential_type'      => $credential,
 			'mode'                 => $mode,
 			'statement_descriptor' => substr( sanitize_text_field( $input['statement_descriptor'] ?? '' ), 0, 22 ),
 		);
@@ -606,8 +615,10 @@ class ETM_Settings {
 		$key_fields = array(
 			'test_publishable_key',
 			'test_secret_key',
+			'test_restricted_key',
 			'live_publishable_key',
 			'live_secret_key',
+			'live_restricted_key',
 			'webhook_secret',
 			'live_webhook_secret',
 		);

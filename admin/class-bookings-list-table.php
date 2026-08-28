@@ -125,7 +125,7 @@ class ETM_Bookings_List_Table extends WP_List_Table {
 
 		$views['all'] = sprintf(
 			'<a href="%s"%s>%s <span class="count">(%d)</span></a>',
-			esc_url( admin_url( 'admin.php?page=etm-bookings' ) ),
+			esc_url( admin_url( 'admin.php?page=etm-bookings&action=bookings' ) ),
 			'' === $current ? ' class="current"' : '',
 			esc_html__( 'All', 'event-ticket-manager' ),
 			array_sum( $counts )
@@ -134,7 +134,7 @@ class ETM_Bookings_List_Table extends WP_List_Table {
 		foreach ( ETM_Bookings::statuses() as $status => $label ) {
 			$views[ $status ] = sprintf(
 				'<a href="%s"%s>%s <span class="count">(%d)</span></a>',
-				esc_url( admin_url( 'admin.php?page=etm-bookings&payment_status=' . $status ) ),
+				esc_url( admin_url( 'admin.php?page=etm-bookings&action=bookings&payment_status=' . $status ) ),
 				$current === $status ? ' class="current"' : '',
 				esc_html( $label ),
 				(int) ( $counts[ $status ] ?? 0 )

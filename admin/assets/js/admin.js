@@ -30,15 +30,19 @@
 	 */
 	function initConfirmations() {
 		document.addEventListener( 'click', function ( event ) {
-			var link = event.target.closest( '.etm-delete, .etm-delete-booking' );
+			var link = event.target.closest( '.etm-delete, .etm-delete-booking, .etm-regenerate-code' );
 
 			if ( ! link ) {
 				return;
 			}
 
-			var message = link.classList.contains( 'etm-delete-booking' )
-				? ( strings.confirmDeleteBooking || 'Delete this booking?' )
-				: ( strings.confirmDelete || 'Delete this permanently?' );
+			var message = strings.confirmDelete || 'Delete this permanently?';
+
+			if ( link.classList.contains( 'etm-delete-booking' ) ) {
+				message = strings.confirmDeleteBooking || 'Delete this booking?';
+			} else if ( link.classList.contains( 'etm-regenerate-code' ) ) {
+				message = strings.confirmRegenerateCode || 'Replace this code? The old code will stop working immediately.';
+			}
 
 			if ( ! window.confirm( message ) ) {
 				event.preventDefault();
@@ -435,9 +439,19 @@
 							parts.push( data.account_id );
 						}
 
+						if ( data.credentials ) {
+							parts.push( data.credentials );
+						}
+
+						if ( data.limited ) {
+							parts.push( 'account details not readable with this key' );
+						}
+
 						detail.textContent = parts.length ? parts.join( ' — ' ) : ( data.message || '' );
 					} else {
-						detail.textContent = data.reason || data.message || ( config.genericError || '' );
+						var why = data.reason || data.message || ( config.genericError || '' );
+
+						detail.textContent = data.credentials ? why + ' (' + data.credentials + ')' : why;
 					}
 				}
 			} ).catch( function ( error ) {
@@ -456,7 +470,35 @@
 		} );
 	}
 
+	/**
+	 * Show only the credential field that the selected type actually uses.
+	 *
+	 * Presentation only: both fields keep their stored values, so switching
+	 * type back and forth never discards a saved key.
+	 */
+	function initCredentialType() {
+		var select = document.querySelector( '[data-etm-credential-type]' );
+
+		if ( ! select ) {
+			return;
+		}
+
+		var rows = document.querySelectorAll( '[data-etm-credential-row]' );
+
+		function sync() {
+			Array.prototype.forEach.call( rows, function ( row ) {
+				var wanted = row.getAttribute( 'data-etm-credential-row' ) === select.value;
+
+				row.style.display = wanted ? '' : 'none';
+			} );
+		}
+
+		select.addEventListener( 'change', sync );
+		sync();
+	}
+
 	function init() {
+		initCredentialType();
 		initScopeToggles();
 		initToggles();
 		initConfirmations();

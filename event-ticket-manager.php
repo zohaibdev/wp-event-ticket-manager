@@ -3,7 +3,7 @@
  * Plugin Name:       Event Ticket Manager
  * Plugin URI:        https://webnday.com
  * Description:       Standalone event ticket management: event CRUD, ticket variations and quantities, attendee collection, in-page Stripe payments, bookings and email notifications. Frontend is shortcode based.
- * Version:           1.9.1
+ * Version:           1.11.1
  * Requires at least: 6.0
  * Requires PHP:      8.1
  * Author:            Webnday
@@ -18,8 +18,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'ETM_VERSION', '1.9.1' );
-define( 'ETM_DB_VERSION', '1.7.0' );
+define( 'ETM_VERSION', '1.11.1' );
+define( 'ETM_DB_VERSION', '1.8.1' );
 define( 'ETM_PLUGIN_FILE', __FILE__ );
 define( 'ETM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ETM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -73,6 +73,52 @@ $etm_key_hint = static function ( string $value ): string {
 			</tr>
 
 			<tr>
+				<th scope="row">
+					<label for="etm-credential-type"><?php esc_html_e( 'API Credential Type', 'event-ticket-manager' ); ?></label>
+				</th>
+				<td>
+					<select id="etm-credential-type" name="<?php echo esc_attr( $etm_name ); ?>[credential_type]" data-etm-credential-type>
+						<?php foreach ( ETM_Stripe::credential_types() as $etm_cred_key => $etm_cred_label ) : ?>
+							<option value="<?php echo esc_attr( $etm_cred_key ); ?>" <?php selected( ETM_Stripe::get_credential_type(), $etm_cred_key ); ?>>
+								<?php echo esc_html( $etm_cred_label ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+
+					<p class="description">
+						<?php esc_html_e( 'A restricted key limits what this site can do with your Stripe account. Only the key for the type selected here is used; the other can stay empty.', 'event-ticket-manager' ); ?>
+					</p>
+
+					<?php $etm_mismatch = ETM_Stripe::credential_type_mismatch(); ?>
+					<?php if ( '' !== $etm_mismatch ) : ?>
+						<p class="etm-status-warn"><?php echo esc_html( $etm_mismatch ); ?></p>
+					<?php endif; ?>
+
+					<div data-etm-credential-row="restricted_key">
+						<p class="description">
+							<strong><?php esc_html_e( 'Permissions this plugin needs:', 'event-ticket-manager' ); ?></strong>
+						</p>
+						<ul class="etm-permission-list">
+							<?php foreach ( ETM_Stripe::required_permissions() as $etm_perm ) : ?>
+								<li>
+									<code><?php echo esc_html( $etm_perm['name'] . ': ' . $etm_perm['level'] ); ?></code>
+									<?php if ( $etm_perm['required'] ) : ?>
+										<strong><?php esc_html_e( '(required)', 'event-ticket-manager' ); ?></strong>
+									<?php else : ?>
+										<em><?php esc_html_e( '(optional)', 'event-ticket-manager' ); ?></em>
+									<?php endif; ?>
+									&mdash; <?php echo esc_html( $etm_perm['note'] ); ?>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<p class="description">
+							<?php esc_html_e( 'Everything else can be left at None. This plugin never calls the customer, charge, refund or payment method endpoints.', 'event-ticket-manager' ); ?>
+						</p>
+					</div>
+				</td>
+			</tr>
+
+			<tr>
 				<th scope="row"><?php esc_html_e( 'Mode', 'event-ticket-manager' ); ?></th>
 				<td>
 					<fieldset>
@@ -113,7 +159,7 @@ $etm_key_hint = static function ( string $value ): string {
 				</td>
 			</tr>
 
-			<tr>
+			<tr data-etm-credential-row="secret_key">
 				<th scope="row">
 					<label for="etm-test-sk"><?php esc_html_e( 'Test Secret Key', 'event-ticket-manager' ); ?></label>
 				</th>
@@ -128,6 +174,24 @@ $etm_key_hint = static function ( string $value ): string {
 						placeholder="sk_test_..."
 					/>
 					<p class="description"><?php echo wp_kses_post( $etm_key_hint( (string) $etm_stripe['test_secret_key'] ) ); ?></p>
+				</td>
+			</tr>
+
+			<tr data-etm-credential-row="restricted_key">
+				<th scope="row">
+					<label for="etm-test-rk"><?php esc_html_e( 'Test Restricted API Key', 'event-ticket-manager' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="etm-test-rk"
+						name="<?php echo esc_attr( $etm_name ); ?>[test_restricted_key]"
+						value=""
+						class="regular-text"
+						autocomplete="new-password"
+						placeholder="rk_test_..."
+					/>
+					<p class="description"><?php echo wp_kses_post( $etm_key_hint( (string) $etm_stripe['test_restricted_key'] ) ); ?></p>
 				</td>
 			</tr>
 
@@ -173,7 +237,7 @@ $etm_key_hint = static function ( string $value ): string {
 				</td>
 			</tr>
 
-			<tr>
+			<tr data-etm-credential-row="secret_key">
 				<th scope="row">
 					<label for="etm-live-sk"><?php esc_html_e( 'Live Secret Key', 'event-ticket-manager' ); ?></label>
 				</th>
@@ -188,6 +252,24 @@ $etm_key_hint = static function ( string $value ): string {
 						placeholder="sk_live_..."
 					/>
 					<p class="description"><?php echo wp_kses_post( $etm_key_hint( (string) $etm_stripe['live_secret_key'] ) ); ?></p>
+				</td>
+			</tr>
+
+			<tr data-etm-credential-row="restricted_key">
+				<th scope="row">
+					<label for="etm-live-rk"><?php esc_html_e( 'Live Restricted API Key', 'event-ticket-manager' ); ?></label>
+				</th>
+				<td>
+					<input
+						type="password"
+						id="etm-live-rk"
+						name="<?php echo esc_attr( $etm_name ); ?>[live_restricted_key]"
+						value=""
+						class="regular-text"
+						autocomplete="new-password"
+						placeholder="rk_live_..."
+					/>
+					<p class="description"><?php echo wp_kses_post( $etm_key_hint( (string) $etm_stripe['live_restricted_key'] ) ); ?></p>
 				</td>
 			</tr>
 

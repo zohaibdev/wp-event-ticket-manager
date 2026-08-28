@@ -282,6 +282,11 @@ class ETM_Bookings {
 		}
 		ETM_Attendees::save_for_booking( $booking_id, $attendees );
 
+		// An order for nothing but a Sharing a Room ticket produces no attendee
+		// slots, but the purchaser is still an attendee and still needs their
+		// own code, QR and check-in status.
+		ETM_Attendees::ensure_primary_for_booking( $booking_id );
+
 		$customer_custom = isset( $payload['customer_custom'] ) && is_array( $payload['customer_custom'] )
 			? $payload['customer_custom']
 			: array();

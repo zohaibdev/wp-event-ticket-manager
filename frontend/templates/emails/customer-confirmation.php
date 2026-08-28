@@ -110,6 +110,24 @@ $etm_label = 'padding:10px 0;font-size:14px;color:#616e7c;border-bottom:1px soli
 												<?php if ( ! empty( $attendee->ticket_title_snapshot ) ) : ?>
 													<br /><span style="color:#616e7c;font-size:12px;"><?php echo esc_html( $attendee->ticket_title_snapshot ); ?></span>
 												<?php endif; ?>
+												<?php if ( ! empty( $attendee->security_code ) ) : ?>
+													<br /><span style="color:#616e7c;font-size:12px;">
+														<?php esc_html_e( 'Security Code:', 'event-ticket-manager' ); ?>
+														<strong><?php echo esc_html( (string) $attendee->security_code ); ?></strong>
+													</span>
+													<?php $etm_attendee_qr = ETM_Attendees::qr_png_data_uri( (string) $attendee->security_code ); ?>
+													<?php if ( '' !== $etm_attendee_qr ) : ?>
+														<div style="margin-top:8px;">
+															<img
+																src="<?php echo esc_attr( $etm_attendee_qr ); ?>"
+																width="100"
+																height="100"
+																alt="<?php esc_attr_e( 'Ticket QR code', 'event-ticket-manager' ); ?>"
+																style="display:block;margin-left:auto;"
+															/>
+														</div>
+													<?php endif; ?>
+												<?php endif; ?>
 											</td>
 										</tr>
 									<?php endforeach; ?>

@@ -39,6 +39,27 @@ $etm_action_url = static function ( string $action, int $id, array $extra = arra
 		'etm_booking_action_' . $action . '_' . $id
 	);
 };
+
+/**
+ * Build a nonced attendee action URL.
+ *
+ * @param string $action      Action key.
+ * @param int    $attendee_id Attendee ID.
+ * @return string
+ */
+$etm_attendee_action_url = static function ( string $action, int $attendee_id ): string {
+	return wp_nonce_url(
+		add_query_arg(
+			array(
+				'action'     => 'etm_attendee_action',
+				'etm_action' => $action,
+				'attendee'   => $attendee_id,
+			),
+			admin_url( 'admin-post.php' )
+		),
+		'etm_attendee_action_' . $action . '_' . $attendee_id
+	);
+};
 ?>
 <div class="wrap etm-wrap">
 	<h1 class="wp-heading-inline">
@@ -201,12 +222,20 @@ $etm_action_url = static function ( string $action, int $id, array $extra = arra
 								<th><?php esc_html_e( 'Name', 'event-ticket-manager' ); ?></th>
 								<th><?php esc_html_e( 'Email', 'event-ticket-manager' ); ?></th>
 								<th><?php esc_html_e( 'Ticket Type', 'event-ticket-manager' ); ?></th>
+								<th><?php esc_html_e( 'Security Code', 'event-ticket-manager' ); ?></th>
+								<th><?php esc_html_e( 'QR', 'event-ticket-manager' ); ?></th>
+								<th><?php esc_html_e( 'Coming', 'event-ticket-manager' ); ?></th>
+								<th><?php esc_html_e( 'Check In', 'event-ticket-manager' ); ?></th>
 								<th><?php esc_html_e( 'Additional', 'event-ticket-manager' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
 							<?php foreach ( $attendees as $etm_attendee ) : ?>
-								<?php $etm_scope = 'attendee_' . (int) $etm_attendee->attendee_number; ?>
+								<?php
+								$etm_scope      = 'attendee_' . (int) $etm_attendee->attendee_number;
+								$etm_checked_in = ! empty( $etm_attendee->check_in_status );
+								$etm_code       = (string) $etm_attendee->security_code;
+								?>
 								<tr>
 									<td><?php echo esc_html( (string) (int) $etm_attendee->attendee_number ); ?></td>
 									<td><?php echo esc_html( $etm_attendee->name ); ?></td>
@@ -217,6 +246,52 @@ $etm_action_url = static function ( string $action, int $id, array $extra = arra
 										<?php else : ?>
 											<span class="etm-muted">&mdash;</span>
 										<?php endif; ?>
+									</td>
+									<td>
+										<?php if ( '' !== $etm_code ) : ?>
+											<code class="etm-code"><?php echo esc_html( $etm_code ); ?></code>
+											<div>
+												<a href="<?php echo esc_url( $etm_attendee_action_url( 'regenerate_code', (int) $etm_attendee->id ) ); ?>" class="etm-muted etm-regenerate-code">
+													<?php esc_html_e( 'Regenerate', 'event-ticket-manager' ); ?>
+												</a>
+											</div>
+										<?php else : ?>
+											<span class="etm-muted">&mdash;</span>
+										<?php endif; ?>
+									</td>
+									<td>
+										<?php if ( '' !== $etm_code ) : ?>
+											<span class="etm-attendee-qr"><?php echo ETM_Attendees::qr_svg( $etm_code ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- self-generated SVG markup. ?></span>
+											<div>
+												<a href="<?php echo esc_url( ETM_Attendees::verification_url( $etm_code ) ); ?>" target="_blank" rel="noopener noreferrer">
+													<?php esc_html_e( 'View Ticket', 'event-ticket-manager' ); ?>
+												</a>
+											</div>
+										<?php else : ?>
+											<span class="etm-muted">&mdash;</span>
+										<?php endif; ?>
+									</td>
+									<td>
+										<?php echo esc_html( ETM_Attendees::coming_status_label( (string) $etm_attendee->coming_status ) ); ?>
+									</td>
+									<td>
+										<?php
+										echo etm_status_badge( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in helper.
+											$etm_checked_in ? 'paid' : 'pending',
+											ETM_Attendees::check_in_label( $etm_checked_in )
+										);
+										?>
+										<div>
+											<?php if ( $etm_checked_in ) : ?>
+												<a href="<?php echo esc_url( $etm_attendee_action_url( 'undo_check_in', (int) $etm_attendee->id ) ); ?>">
+													<?php esc_html_e( 'Undo Check In', 'event-ticket-manager' ); ?>
+												</a>
+											<?php else : ?>
+												<a href="<?php echo esc_url( $etm_attendee_action_url( 'check_in', (int) $etm_attendee->id ) ); ?>">
+													<?php esc_html_e( 'Check In', 'event-ticket-manager' ); ?>
+												</a>
+											<?php endif; ?>
+										</div>
 									</td>
 									<td>
 										<?php if ( ! empty( $custom_values[ $etm_scope ] ) ) : ?>

@@ -232,11 +232,19 @@ class ETM_Database {
 			email varchar(255) NOT NULL DEFAULT '',
 			ticket_type_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			ticket_title_snapshot varchar(255) NULL DEFAULT NULL,
+			security_code varchar(20) NULL DEFAULT NULL,
+			check_in_status tinyint(1) NOT NULL DEFAULT 0,
+			check_in_at datetime NULL DEFAULT NULL,
+			check_in_by bigint(20) unsigned NULL DEFAULT NULL,
+			coming_status varchar(10) NOT NULL DEFAULT '',
+			coming_at datetime NULL DEFAULT NULL,
 			created_at datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 			PRIMARY KEY  (id),
 			UNIQUE KEY booking_attendee (booking_id,attendee_number),
+			UNIQUE KEY security_code (security_code),
 			KEY booking_id (booking_id),
-			KEY ticket_type_id (ticket_type_id)
+			KEY ticket_type_id (ticket_type_id),
+			KEY check_in_status (check_in_status)
 		) {$charset_collate};";
 
 		$schema[] = "CREATE TABLE {$booking_meta} (
@@ -355,6 +363,54 @@ class ETM_Database {
 		self::migrate_single_ticket_events();
 		self::migrate_ticket_quantity_fields();
 		self::migrate_roommate_addon_to_variation();
+		// Records first, then codes: a row created here is given its code by
+		// ETM_Attendees::create(), and the backfill below catches everything
+		// that predates security codes entirely.
+		self::migrate_attendee_records();
+		self::migrate_attendee_security_codes();
+	}
+
+	/**
+	 * Give every historical booking that has no attendee rows one for its
+	 * purchaser.
+	 *
+	 * Bookings taken before attendees were stored separately, and orders for
+	 * nothing but a Sharing a Room ticket, both land in the database with the
+	 * buyer's name and email on the booking row and no attendee record at
+	 * all. Those people are attendees, and without a row they can never hold
+	 * a security code, a QR ticket or a check-in status.
+	 *
+	 * Nothing is read from or written to the booking itself - the booking
+	 * number, totals, payment status and Stripe IDs are untouched. Only the
+	 * missing attendee row is added, and only when there is none, so running
+	 * this twice cannot duplicate an attendee.
+	 */
+	public static function migrate_attendee_records(): void {
+		global $wpdb;
+
+		if ( 'done' === get_option( 'etm_attendee_records_migrated', '' ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'ETM_Attendees' ) || ! class_exists( 'ETM_Bookings' ) ) {
+			return;
+		}
+
+		$bookings  = self::bookings_table();
+		$attendees = self::attendees_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$ids = $wpdb->get_col(
+			"SELECT b.id FROM {$bookings} b
+			LEFT JOIN {$attendees} a ON a.booking_id = b.id
+			WHERE a.id IS NULL"
+		);
+
+		foreach ( $ids as $id ) {
+			ETM_Attendees::ensure_primary_for_booking( (int) $id );
+		}
+
+		update_option( 'etm_attendee_records_migrated', 'done' );
 	}
 
 	/**
@@ -367,6 +423,37 @@ class ETM_Database {
 			// Table names are built from $wpdb->prefix and cannot be parameterised.
 			$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
 		}
+	}
+
+	/**
+	 * Give every attendee row created before security codes existed one of
+	 * their own.
+	 *
+	 * Runs once. A code, once assigned, never changes here or anywhere else -
+	 * this only fills in rows where the column is still empty, so a second run
+	 * (or running against a database that already has codes) touches nothing.
+	 */
+	public static function migrate_attendee_security_codes(): void {
+		global $wpdb;
+
+		if ( 'done' === get_option( 'etm_attendee_codes_migrated', '' ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'ETM_Attendees' ) ) {
+			return;
+		}
+
+		$table = self::attendees_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$ids = $wpdb->get_col( "SELECT id FROM {$table} WHERE security_code IS NULL OR security_code = ''" );
+
+		foreach ( $ids as $id ) {
+			ETM_Attendees::assign_security_code( (int) $id );
+		}
+
+		update_option( 'etm_attendee_codes_migrated', 'done' );
 	}
 
 	/**

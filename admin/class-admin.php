@@ -23,6 +23,8 @@ class ETM_Admin {
 		add_action( 'admin_post_etm_save_event', array( $this, 'handle_save_event' ) );
 		add_action( 'admin_post_etm_event_action', array( $this, 'handle_event_action' ) );
 		add_action( 'admin_post_etm_booking_action', array( $this, 'handle_booking_action' ) );
+		add_action( 'admin_post_etm_attendee_action', array( $this, 'handle_attendee_action' ) );
+		add_action( 'admin_post_etm_export_attendees_csv', array( $this, 'handle_export_attendees_csv' ) );
 		add_action( 'admin_post_etm_save_fields', array( $this, 'handle_save_fields' ) );
 		add_action( 'admin_post_etm_save_coupon', array( $this, 'handle_save_coupon' ) );
 		add_action( 'admin_post_etm_coupon_action', array( $this, 'handle_coupon_action' ) );
@@ -76,8 +78,8 @@ class ETM_Admin {
 
 		add_submenu_page(
 			'etm-events',
-			__( 'Bookings', 'event-ticket-manager' ),
-			__( 'Bookings', 'event-ticket-manager' ),
+			__( 'Attendees', 'event-ticket-manager' ),
+			__( 'Attendees', 'event-ticket-manager' ),
 			$capability,
 			'etm-bookings',
 			array( $this, 'render_bookings_page' )
@@ -128,8 +130,9 @@ class ETM_Admin {
 			'etm-admin',
 			'etmAdmin',
 			array(
-				'confirmDelete'        => __( 'Delete this permanently? This cannot be undone.', 'event-ticket-manager' ),
-				'confirmDeleteBooking' => __( 'Delete this booking? Attendee records will be removed too.', 'event-ticket-manager' ),
+				'confirmDelete'         => __( 'Delete this permanently? This cannot be undone.', 'event-ticket-manager' ),
+				'confirmDeleteBooking'  => __( 'Delete this booking? Attendee records will be removed too.', 'event-ticket-manager' ),
+				'confirmRegenerateCode' => __( 'Replace this code? The old code will stop working immediately.', 'event-ticket-manager' ),
 				'ajaxUrl'              => admin_url( 'admin-ajax.php' ),
 				'stripeTestNonce'      => wp_create_nonce( 'etm_test_stripe_connection' ),
 				'testing'              => __( 'Testing...', 'event-ticket-manager' ),
@@ -184,8 +187,9 @@ class ETM_Admin {
 			);
 		}
 
-		$mode   = ETM_Stripe::get_mode();
-		$result = ETM_Stripe::verify_connection();
+		$mode        = ETM_Stripe::get_mode();
+		$credentials = ETM_Stripe::credential_types()[ ETM_Stripe::get_credential_type() ];
+		$result      = ETM_Stripe::verify_connection();
 
 		if ( is_wp_error( $result ) ) {
 			ETM_Stripe::store_connection_state(
@@ -198,7 +202,8 @@ class ETM_Admin {
 					'message' => __( 'Stripe connection failed.', 'event-ticket-manager' ),
 					'reason'  => ETM_Stripe::redact( $result->get_error_message() ),
 					'code'    => (string) $result->get_error_code(),
-					'mode'    => $mode,
+					'mode'        => $mode,
+					'credentials' => $credentials,
 					'status'  => ETM_Stripe::STATUS_FAILED,
 					'label'   => ETM_Stripe::connection_status_label( ETM_Stripe::STATUS_FAILED ),
 				)
@@ -211,6 +216,8 @@ class ETM_Admin {
 			array(
 				'message'       => __( 'Stripe connection successful.', 'event-ticket-manager' ),
 				'mode'          => $mode,
+				'credentials'   => $credentials,
+				'limited'       => ! empty( $result['limited'] ),
 				'status'        => ETM_Stripe::STATUS_CONNECTED,
 				'label'         => ETM_Stripe::connection_status_label( ETM_Stripe::STATUS_CONNECTED ),
 				'account_id'    => $result['account_id'],
@@ -262,7 +269,7 @@ class ETM_Admin {
 	}
 
 	/**
-	 * Bookings list or a single booking.
+	 * The attendees list, the booking-level list, or a single booking.
 	 */
 	public function render_bookings_page(): void {
 		$this->require_capability();
@@ -289,12 +296,29 @@ class ETM_Admin {
 			return;
 		}
 
-		require_once ETM_PLUGIN_DIR . 'admin/class-bookings-list-table.php';
+		// The booking-level list is still available behind its own action, so
+		// orders can be browsed the way they always were.
+		if ( 'bookings' === $action ) {
+			require_once ETM_PLUGIN_DIR . 'admin/class-bookings-list-table.php';
 
-		$table = new ETM_Bookings_List_Table();
+			$table = new ETM_Bookings_List_Table();
+			$table->prepare_items();
+
+			include ETM_PLUGIN_DIR . 'admin/views/bookings-list.php';
+
+			return;
+		}
+
+		// Attendees are the primary management screen: one row per person,
+		// each with their own code, QR and check-in state. The booking detail
+		// above stays reachable from every row, so historical orders remain
+		// readable exactly as before.
+		require_once ETM_PLUGIN_DIR . 'admin/class-attendees-list-table.php';
+
+		$table = new ETM_Attendees_List_Table();
 		$table->prepare_items();
 
-		include ETM_PLUGIN_DIR . 'admin/views/bookings-list.php';
+		include ETM_PLUGIN_DIR . 'admin/views/attendees-list.php';
 	}
 
 	/**
@@ -736,6 +760,162 @@ class ETM_Admin {
 		}
 
 		$this->redirect_back( add_query_arg( 'etm_msg', $message, $redirect ) );
+	}
+
+	/**
+	 * Check in, undo a check-in, or regenerate a security code for one
+	 * attendee, then return to the booking they belong to.
+	 */
+	public function handle_attendee_action(): void {
+		$this->require_capability();
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- nonce checked below per action.
+		$action       = isset( $_REQUEST['etm_action'] ) ? sanitize_key( wp_unslash( $_REQUEST['etm_action'] ) ) : '';
+		$attendee_id  = isset( $_REQUEST['attendee'] ) ? absint( $_REQUEST['attendee'] ) : 0;
+		// phpcs:enable
+
+		check_admin_referer( 'etm_attendee_action_' . $action . '_' . $attendee_id );
+
+		$attendee = ETM_Attendees::get( $attendee_id );
+		$message  = 'error';
+
+		if ( $attendee ) {
+			switch ( $action ) {
+				case 'check_in':
+					$message = ETM_Attendees::set_check_in( $attendee_id, true, get_current_user_id() ) ? 'updated' : 'error';
+					break;
+
+				case 'undo_check_in':
+					$message = ETM_Attendees::set_check_in( $attendee_id, false ) ? 'updated' : 'error';
+					break;
+
+				case 'regenerate_code':
+					$message = '' !== ETM_Attendees::regenerate_security_code( $attendee_id ) ? 'updated' : 'error';
+					break;
+			}
+		}
+
+		// Return to whichever screen the action was fired from - the attendee
+		// list (filters and page intact) or the booking detail - rather than
+		// always bouncing to the booking.
+		$referer = wp_get_referer();
+
+		$redirect = $referer
+			? $referer
+			: add_query_arg(
+				array(
+					'page'    => 'etm-bookings',
+					'action'  => 'view',
+					'booking' => $attendee ? (int) $attendee->booking_id : 0,
+				),
+				admin_url( 'admin.php' )
+			);
+
+		$this->redirect_back( add_query_arg( 'etm_msg', $message, remove_query_arg( 'etm_msg', $redirect ) ) );
+	}
+
+	/**
+	 * Stream a CSV of bookings matching the current Attendees list filters.
+	 *
+	 * One row per booking - every attendee on that booking is combined into
+	 * the name/email column, matching how the booking is already presented
+	 * everywhere else in the admin.
+	 */
+	public function handle_export_attendees_csv(): void {
+		$this->require_capability();
+		check_admin_referer( 'etm_export_attendees_csv' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- verified above.
+		$search    = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
+		$status    = isset( $_GET['payment_status'] ) ? sanitize_key( wp_unslash( $_GET['payment_status'] ) ) : '';
+		$event_id  = isset( $_GET['event_id'] ) ? absint( $_GET['event_id'] ) : 0;
+		$check_in  = isset( $_GET['check_in_status'] ) && '' !== $_GET['check_in_status']
+			? sanitize_key( wp_unslash( $_GET['check_in_status'] ) )
+			: '';
+		$date_from = isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '';
+		$date_to   = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '';
+		// phpcs:enable
+
+		// The export follows the Attendees screen's own filters. Because a row
+		// is a booking, the attendee-level query resolves which bookings match
+		// and the booking is then exported whole - so filtering by check-in
+		// never truncates the people listed on a booking that qualifies.
+		$matched = ETM_Attendees::query(
+			array(
+				'search'          => $search,
+				'payment_status'  => $status,
+				'event_id'        => $event_id,
+				'check_in_status' => $check_in,
+				'date_from'       => $date_from,
+				'date_to'         => $date_to,
+				'orderby'         => 'booking_date',
+				'order'           => 'DESC',
+				'per_page'        => 100000,
+				'page'            => 1,
+			)
+		);
+
+		$booking_ids = array();
+
+		foreach ( $matched['items'] as $attendee ) {
+			$booking_ids[ (int) $attendee->booking_id ] = true;
+		}
+
+		// A booking with no attendee row of its own - a Sharing a Room order
+		// taken before this release, where the buyer and the roommate are both
+		// recorded on the booking itself - would otherwise be joined away and
+		// vanish from the export entirely. Those are matched on the booking's
+		// own fields and added back, so nobody is ever silently left out.
+		// Checked-In cannot match a booking that has no attendee to check in.
+		if ( '1' !== $check_in ) {
+			$orphans = ETM_Attendees::booking_ids_without_attendees();
+
+			if ( ! empty( $orphans ) ) {
+				$by_booking = ETM_Bookings::query(
+					array(
+						'search'         => $search,
+						'payment_status' => $status,
+						'event_id'       => $event_id,
+						'date_from'      => $date_from,
+						'date_to'        => $date_to,
+						'orderby'        => 'created_at',
+						'order'          => 'DESC',
+						'per_page'       => 100000,
+						'page'           => 1,
+					)
+				);
+
+				$orphans = array_flip( $orphans );
+
+				foreach ( $by_booking['items'] as $booking ) {
+					if ( isset( $orphans[ (int) $booking->id ] ) ) {
+						$booking_ids[ (int) $booking->id ] = true;
+					}
+				}
+			}
+		}
+
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=UTF-8' );
+		header( 'Content-Disposition: attachment; filename="attendees-' . gmdate( 'Y-m-d' ) . '.csv"' );
+
+		$out = fopen( 'php://output', 'w' );
+
+		// A UTF-8 BOM so Excel does not mangle non-ASCII names.
+		fwrite( $out, "\xEF\xBB\xBF" );
+
+		fputcsv( $out, ETM_Attendees_Export::headers() );
+
+		foreach ( array_keys( $booking_ids ) as $booking_id ) {
+			$booking = ETM_Bookings::get( $booking_id );
+
+			if ( $booking ) {
+				fputcsv( $out, ETM_Attendees_Export::booking_row( $booking ) );
+			}
+		}
+
+		fclose( $out );
+		exit;
 	}
 
 	/**

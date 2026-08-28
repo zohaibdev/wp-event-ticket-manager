@@ -597,3 +597,24 @@
 .etm-conn--not_connected {
 	color: #8a6d3b;
 }
+
+/* Restricted key permission list */
+
+.etm-permission-list {
+	margin: 4px 0 8px 18px;
+	list-style: disc;
+	font-size: 13px;
+	color: #50575e;
+}
+
+/* Attendee QR thumbnail */
+
+.etm-attendee-qr {
+	display: inline-block;
+}
+
+.etm-attendee-qr svg {
+	width: 70px;
+	height: 70px;
+	display: block;
+}

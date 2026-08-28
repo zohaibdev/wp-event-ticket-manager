@@ -6,7 +6,7 @@ Plugin URI: https://webnday.com
 Requires at least: 6.0
 Tested up to: 6.5
 Requires PHP: 8.1
-Stable tag: 1.5.1
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,15 @@ Yes. Copy any file from `frontend/templates/` into `your-theme/event-ticket-mana
 * An HTTPS site. Stripe.js refuses to collect card details over plain HTTP outside localhost.
 
 == Changelog ==
+
+= 1.11.0 =
+* Bookings is now Attendees: the admin screen lists one row per person, each with their own security code, QR ticket and check-in status, while the booking they belong to stays one click away under View by booking.
+* Every attendee now gets a unique, cryptographically random security code (EVT-XXXX-XXXX-XX). Codes are issued once and never regenerated on their own; an admin can replace one deliberately.
+* Each attendee gets their own QR ticket, generated on the fly from their code. The QR carries only a verification URL, never a name, email or payment detail.
+* Scanning a QR opens a standalone ticket page that loads no theme header, footer or navigation and needs no login. It validates the code server-side and offers "I am Coming" and "Check In".
+* Check-in is per attendee and idempotent, records when it happened and which admin did it, and can be undone.
+* Added an Attendees CSV export with filters for event, payment status, check-in status, date range and search.
+* Existing bookings, booking numbers, totals, payment statuses and Stripe transaction IDs are untouched. Attendees that predate this release are given codes automatically, and any booking with no attendee record - including an order for nothing but a Sharing a Room ticket - gains one for its purchaser.
 
 = 1.5.1 =
 * Email templates now ship with default copy instead of four empty editors. Clearing a body still falls back to the built-in layout, and Reset restores the default copy.

@@ -56,7 +56,13 @@ class ETM_Email_Templates {
 			'{{event_type}}'        => __( 'Ticket or RSVP', 'event-ticket-manager' ),
 			'{{booking_number}}'    => __( 'Booking number', 'event-ticket-manager' ),
 			'{{ticket_summary}}'    => __( 'List of ticket types and quantities', 'event-ticket-manager' ),
-			'{{attendee_list}}'     => __( 'List of attendees', 'event-ticket-manager' ),
+			'{{attendee_list}}'     => __( 'List of attendees, each with their own security code and QR ticket', 'event-ticket-manager' ),
+			'{{attendee_name}}'     => __( "One attendee's name - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
+			'{{attendee_email}}'    => __( "One attendee's email - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
+			'{{ticket_type}}'       => __( "One attendee's ticket type - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
+			'{{attendee_security_code}}' => __( "One attendee's unique security code - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
+			'{{attendee_qr_code}}'  => __( "One attendee's QR ticket image - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
+			'{{attendee_check_in_status}}' => __( "One attendee's check-in status - only meaningful inside {{attendee_list}}, resolved per attendee", 'event-ticket-manager' ),
 			'{{roommate_details}}'  => __( 'Every roommate name and email, if any', 'event-ticket-manager' ),
 			'{{roommate_block}}'    => __( 'A complete roommate section, or nothing when there is no roommate', 'event-ticket-manager' ),
 			'{{payment_summary}}'   => __( 'A table of subtotal, fees, discount, total and payment status', 'event-ticket-manager' ),
@@ -260,13 +266,7 @@ class ETM_Email_Templates {
 		$attendee_items = array();
 
 		foreach ( $attendees as $attendee ) {
-			$label = esc_html( trim( (string) $attendee->name ) ) . ' (' . esc_html( (string) $attendee->email ) . ')';
-
-			if ( ! empty( $attendee->ticket_title_snapshot ) ) {
-				$label .= ' &mdash; ' . esc_html( (string) $attendee->ticket_title_snapshot );
-			}
-
-			$attendee_items[] = $label;
+			$attendee_items[] = self::attendee_block( $attendee );
 		}
 
 		// One line per roommate on the booking, however many were bought.
@@ -318,6 +318,51 @@ class ETM_Email_Templates {
 			'{{site_name}}'         => (string) get_bloginfo( 'name' ),
 			'{{site_url}}'          => (string) home_url( '/' ),
 		);
+	}
+
+	/**
+	 * Render one attendee's line for {{attendee_list}}: name, email, ticket
+	 * type, their own security code and QR ticket.
+	 *
+	 * The five {{attendee_*}} / {{ticket_type}} tokens are resolved here,
+	 * against this one attendee, before the result is joined with any other
+	 * attendee's line - so two attendees on the same booking can never end
+	 * up showing each other's code.
+	 *
+	 * @param object $attendee Attendee row.
+	 * @return string
+	 */
+	private static function attendee_block( object $attendee ): string {
+		$code    = (string) $attendee->security_code;
+		$qr_data = '' !== $code ? ETM_Attendees::qr_png_data_uri( $code ) : '';
+
+		$map = array(
+			'{{attendee_name}}'            => esc_html( trim( (string) $attendee->name ) ),
+			'{{attendee_email}}'           => esc_html( (string) $attendee->email ),
+			'{{ticket_type}}'              => esc_html( (string) $attendee->ticket_title_snapshot ),
+			'{{attendee_security_code}}'   => esc_html( $code ),
+			// A PNG data URI, not user data - email clients render <img> far
+			// more reliably than inline <svg>, so this is what emails get.
+			'{{attendee_qr_code}}'         => '' !== $qr_data
+				? '<img src="' . esc_attr( $qr_data ) . '" width="100" height="100" alt="' . esc_attr__( 'Ticket QR code', 'event-ticket-manager' ) . '" style="display:block;" />'
+				: '',
+			'{{attendee_check_in_status}}' => esc_html( ETM_Attendees::check_in_label( ! empty( $attendee->check_in_status ) ) ),
+		);
+
+		$block = '{{attendee_name}} ({{attendee_email}})';
+
+		if ( '' !== (string) $attendee->ticket_title_snapshot ) {
+			$block .= ' &mdash; {{ticket_type}}';
+		}
+
+		if ( '' !== $code ) {
+			$block .= '<br /><span style="color:#616e7c;font-size:12px;">'
+				. esc_html__( 'Security Code:', 'event-ticket-manager' )
+				. ' <strong>{{attendee_security_code}}</strong></span>'
+				. '<div style="margin-top:6px;max-width:120px;">{{attendee_qr_code}}</div>';
+		}
+
+		return strtr( $block, $map );
 	}
 
 	/**

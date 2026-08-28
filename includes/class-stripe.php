@@ -55,16 +55,112 @@ class ETM_Stripe {
 	}
 
 	/**
-	 * Secret key for the active mode.
+	 * A full-access secret key (sk_).
+	 */
+	public const CREDENTIAL_SECRET = 'secret_key';
+
+	/**
+	 * A restricted key (rk_) carrying only the permissions it was granted.
+	 */
+	public const CREDENTIAL_RESTRICTED = 'restricted_key';
+
+	/**
+	 * Credential types with labels.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function credential_types(): array {
+		return array(
+			self::CREDENTIAL_SECRET     => __( 'Secret Key', 'event-ticket-manager' ),
+			self::CREDENTIAL_RESTRICTED => __( 'Restricted API Key', 'event-ticket-manager' ),
+		);
+	}
+
+	/**
+	 * Which credential the site is configured to authenticate with.
+	 *
+	 * @return string
+	 */
+	public static function get_credential_type(): string {
+		$type = (string) ETM_Settings::stripe( 'credential_type', self::CREDENTIAL_SECRET );
+
+		return isset( self::credential_types()[ $type ] ) ? $type : self::CREDENTIAL_SECRET;
+	}
+
+	/**
+	 * The Stripe permissions this plugin actually needs.
+	 *
+	 * Derived from the complete set of API calls it makes - creating, updating,
+	 * cancelling and retrieving PaymentIntents, plus reading the account for the
+	 * connection test. It touches no customer, charge, refund or payment method
+	 * endpoint, so a restricted key needs nothing beyond these.
+	 *
+	 * @return array<int, array{name: string, level: string, required: bool, note: string}>
+	 */
+	public static function required_permissions(): array {
+		return array(
+			array(
+				'name'     => __( 'PaymentIntents', 'event-ticket-manager' ),
+				'level'    => __( 'Write', 'event-ticket-manager' ),
+				'required' => true,
+				'note'     => __( 'Creating, updating, cancelling and reading the payment for each booking.', 'event-ticket-manager' ),
+			),
+			array(
+				'name'     => __( 'Account', 'event-ticket-manager' ),
+				'level'    => __( 'Read', 'event-ticket-manager' ),
+				'required' => false,
+				'note'     => __( 'Only used by Test Connection, to show which account answered. Payments work without it.', 'event-ticket-manager' ),
+			),
+		);
+	}
+
+	/**
+	 * The server-side credential for the active mode and credential type.
+	 *
+	 * Everything that talks to Stripe reads its key through here, so selecting a
+	 * restricted key switches the whole integration over at once - there is no
+	 * second path that could keep using the old credential.
 	 *
 	 * @return string
 	 */
 	public static function get_secret_key(): string {
-		$key = 'live' === self::get_mode()
-			? ETM_Settings::stripe( 'live_secret_key', '' )
-			: ETM_Settings::stripe( 'test_secret_key', '' );
+		$mode  = self::get_mode();
+		$field = self::CREDENTIAL_RESTRICTED === self::get_credential_type()
+			? $mode . '_restricted_key'
+			: $mode . '_secret_key';
 
-		return trim( (string) $key );
+		return trim( (string) ETM_Settings::stripe( $field, '' ) );
+	}
+
+	/**
+	 * Whether the stored key's prefix disagrees with the selected type.
+	 *
+	 * Reported rather than enforced: a site already running an rk_ key pasted
+	 * into the secret field works perfectly well, and refusing to take payments
+	 * over a labelling mismatch would be a worse outcome than saying so.
+	 *
+	 * @return string Empty when consistent.
+	 */
+	public static function credential_type_mismatch(): string {
+		$key = self::get_secret_key();
+
+		if ( '' === $key ) {
+			return '';
+		}
+
+		$restricted = 0 === strpos( $key, 'rk_' );
+		$secret     = 0 === strpos( $key, 'sk_' );
+		$wants_rk   = self::CREDENTIAL_RESTRICTED === self::get_credential_type();
+
+		if ( $wants_rk && $secret ) {
+			return __( 'Credential type is set to Restricted API Key, but the saved key is a full secret key (sk_).', 'event-ticket-manager' );
+		}
+
+		if ( ! $wants_rk && $restricted ) {
+			return __( 'Credential type is set to Secret Key, but the saved key is a restricted key (rk_).', 'event-ticket-manager' );
+		}
+
+		return '';
 	}
 
 	/**
@@ -173,7 +269,7 @@ class ETM_Stripe {
 					$expected,
 					$other
 				)
-				: __( 'The configured Stripe secret key is not in a recognised format.', 'event-ticket-manager' );
+				: self::wrong_slot_message( $secret );
 		}
 
 		$publishable_ok = 0 === strpos( $publishable, 'pk_' . $expected . '_' );
@@ -186,10 +282,48 @@ class ETM_Stripe {
 					$expected,
 					$other
 				)
-				: __( 'The configured Stripe publishable key is not in a recognised format.', 'event-ticket-manager' );
+				: self::publishable_slot_message( $publishable );
 		}
 
 		return '';
+	}
+
+	/**
+	 * Explain a key that is the wrong kind for the server-side slot.
+	 *
+	 * The commonest setup mistake is pasting the publishable key here: both are
+	 * called "keys" and both are copied from the same dashboard page. Stripe
+	 * answers with "Invalid API Key provided: pk_live_...", which reads as
+	 * though the key were broken rather than simply in the wrong box, and sends
+	 * people off rotating a perfectly good key.
+	 *
+	 * @param string $key The stored server-side key.
+	 * @return string
+	 */
+	private static function wrong_slot_message( string $key ): string {
+		if ( 0 === strpos( $key, 'pk_' ) ) {
+			return __( 'A publishable key (pk_) is saved as the server-side key. Publishable keys are meant for the browser and cannot authenticate API requests, which is why Stripe rejects it as invalid. Move it to the Publishable Key field, and save a secret key (sk_) or a restricted key (rk_) here instead.', 'event-ticket-manager' );
+		}
+
+		return __( 'The configured Stripe secret key is not in a recognised format. It should begin with sk_ or rk_.', 'event-ticket-manager' );
+	}
+
+	/**
+	 * Explain a key that is the wrong kind for the publishable slot.
+	 *
+	 * This one matters more than a formatting warning: the publishable key is
+	 * handed to every visitor's browser, so a secret key stored here would be
+	 * published to the world as soon as a ticket block rendered.
+	 *
+	 * @param string $key The stored publishable key.
+	 * @return string
+	 */
+	private static function publishable_slot_message( string $key ): string {
+		if ( 0 === strpos( $key, 'sk_' ) || 0 === strpos( $key, 'rk_' ) ) {
+			return __( 'A secret or restricted key is saved in the Publishable Key field. That field is sent to every visitor, so this key must be removed and rotated in Stripe immediately. The publishable key is the one beginning pk_.', 'event-ticket-manager' );
+		}
+
+		return __( 'The configured Stripe publishable key is not in a recognised format. It should begin with pk_.', 'event-ticket-manager' );
 	}
 
 	/**
@@ -538,6 +672,36 @@ class ETM_Stripe {
 		$account = self::request( 'GET', 'account' );
 
 		if ( is_wp_error( $account ) ) {
+			$data = $account->get_error_data();
+
+			// A restricted key granted only PaymentIntents cannot read the
+			// account. That is a perfectly usable key for this plugin, so rather
+			// than report a working configuration as broken, fall back to
+			// probing the one permission payments actually need.
+			if ( 403 === (int) ( $data['status'] ?? 0 ) && self::CREDENTIAL_RESTRICTED === self::get_credential_type() ) {
+				$probe = self::request( 'GET', 'payment_intents', array( 'limit' => 1 ) );
+
+				if ( is_wp_error( $probe ) ) {
+					$probe_status = (int) ( $probe->get_error_data()['status'] ?? 0 );
+
+					if ( 403 === $probe_status ) {
+						return new WP_Error(
+							'etm_stripe_missing_permission',
+							__( 'The restricted key works, but it has no PaymentIntents permission. Edit the key in Stripe and grant PaymentIntents: Write.', 'event-ticket-manager' )
+						);
+					}
+
+					return $probe;
+				}
+
+				return array(
+					'account_id'    => '',
+					'business_name' => '',
+					'livemode'      => 'live' === self::get_mode(),
+					'limited'       => true,
+				);
+			}
+
 			return $account;
 		}
 
@@ -580,6 +744,7 @@ class ETM_Stripe {
 			'account_id'    => isset( $account['id'] ) ? (string) $account['id'] : '',
 			'business_name' => $name,
 			'livemode'      => $livemode,
+			'limited'       => false,
 		);
 	}
 

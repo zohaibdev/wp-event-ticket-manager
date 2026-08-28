@@ -163,9 +163,8 @@ $etm_steps = array(
 							<?php esc_html_e( 'Roommate Details', 'event-ticket-manager' ); ?>
 						</legend>
 
-						<p class="etm-fieldset__hint">
-							<?php esc_html_e( 'The person sharing your room. Your own details are the ones you gave above.', 'event-ticket-manager' ); ?>
-						</p>
+						<p class="etm-fieldset__hint">The person sharing your room. <strong>Your own details are the ones you gave above.</strong></p>
+
 
 						<div class="etm-grid">
 							<?php foreach ( $roommate_fields as $field ) : ?>

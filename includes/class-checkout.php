@@ -605,11 +605,13 @@ class ETM_Checkout {
 		$data = $error->get_error_data();
 
 		if ( ! empty( $data['customer_safe'] ) ) {
-			return $error->get_error_message();
+			return ETM_Stripe::redact( $error->get_error_message() );
 		}
 
+		// Admins see the real reason, but Stripe quotes the offending key back in
+		// its own copy, so it gets the same scrub the logs get.
 		if ( current_user_can( 'manage_options' ) ) {
-			return $error->get_error_message();
+			return ETM_Stripe::redact( $error->get_error_message() );
 		}
 
 		return __( 'The payment could not be started. Please try again in a moment, or contact the organiser if this continues.', 'event-ticket-manager' );
